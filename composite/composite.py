@@ -1,72 +1,59 @@
-from abc import ABC
-from typing import List, Optional, Set
+import abc
+from typing import List
 
-class Logger():
-  def print(msg: str):
-    print(msg)
-
-logger = Logger()
-
-class Lamp:
-  def __init__(self, starting_oil_mins = 17) -> None:
-    self._oil_mins_remaining = starting_oil_mins
-  
-  def tick(self, time_elapsed_mins: int):
-    self._oil_mins_remaining -= time_elapsed_mins
-  
-  def get_oil_remaining(self):
-    return self._oil_mins_remaining
-
-@ABC
-class AbstractMover:
-  def __init__(self, speed: int, location: str):
-    self._speed = speed
-    self._location = location
-
-  def get_speed(self):
-    return self._speed
-
-  def get_location(self):
-    return self._location
-
-class SingleMover(AbstractMover):
-  ...
-
-class MoverGroup(AbstractMover):
-  def __init__(self, children: List[AbstractMover] = []):
-    self._children: List[AbstractMover] = children
-
-  def get_speed(self):
-    return max([child.get_speed() for child in self._children])
-
-  def get_location(self):
-    return self._children[0].get_location()
-
-  def add_child(self, child: AbstractMover):
-    if len(self._children > 0) and self._children[0].get_location() != child.get_location():
-      logger.print("Can't group people who aren't in the same location")
-    self._children.append(child)
-  
-  def pop_children(self):
-    children = self._children
-    self._children = []
-    return children
+class CostCalculable(abc.ABC):
+  @abc.abstractmethod
+  def get_annual_cost(self):
+    ...
 
 
+class Team(CostCalculable):
+  def __init__(self, name: str, resources: List[CostCalculable]):
+    self._resources = resources
 
-class Game:
-  def __init__(self):
-    self._start_location = {
-      "Anna": SingleMover(1, "start"),
-      "Ben": SingleMover(2, "start"),
-      "Caroline": SingleMover(5, "start"),
-      "Deandra": SingleMover(10, "start")
-    }
-    self._end_location = {}
-    self._lamp = Lamp(17)
-
-    self._logger = Logger()
-
-  
-  def move(self, names_to_move: Set[str]):
+  def get_annual_cost(self):
+    total = 0
+    for resource in self._resources:
+      total += resource.get_annual_cost()
     
+    return total
+
+class ItemGroup(CostCalculable):
+  def __init__(self, type: str, price_per_unit: int, units: int):
+    self._type = type
+    self._price_per_unit = price_per_unit
+    self._units = units
+  
+  def get_annual_cost(self):
+    return self._price_per_unit * self._units
+
+class Worker(CostCalculable):
+  def __init__(self, name:str, position: str, monthly_salary: int):
+    self._name = name
+    self._position = position
+    self._monthly_salary = monthly_salary
+  
+  def get_annual_cost(self):
+    return self._monthly_salary * 12
+
+
+steve = Worker("Steve", "Code Monkey", 100)
+art_department = Team("Art Department", resources=[
+  Worker("Lauren", "Pencil Expert", 150),
+  Worker("James", "Drawing Genius", 150),
+  ItemGroup("Pencils", 1, 100)
+])
+
+company = Team("Acme", resources=[
+  art_department,
+  Team("Dev team", resources=[
+    steve,
+    Worker("Ellen", "Senior Code Monkey", 300),
+    ItemGroup("Laptops", 400, 2)
+  ]),
+  Worker("Philbert", "CEO", 1000)
+])
+
+print(f"Cost of Steve: {steve.get_annual_cost()}")
+print(f"Cost of Art: {art_department.get_annual_cost()}")
+print(f"Cost of Company: {company.get_annual_cost()}")
